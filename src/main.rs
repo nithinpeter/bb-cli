@@ -1,25 +1,30 @@
-use structopt::StructOpt;
+extern crate clap;
 
-/// Search for a pattern in a file and display the lines that contain it.
-#[derive(StructOpt)]
-struct Cli {
-    /// The pattern to look for
-    pattern: String,
-    /// The path to the file to read
-    #[structopt(parse(from_os_str))]
-    path: std::path::PathBuf,
-}
+use clap::{Arg, App};
 
 fn main() {
-    let args = Cli::from_args();
+    let matches = App::new("bb-cli")
+        .about("A CLI app for Bitbucket")
+        .version("0.1.0")
+        .author("npeter@atlassian.com")
+        .subcommand(
+            App::new("pr").about("pull requests").arg(
+                Arg::with_name("open")
+                    .long("open")
+                    .short("o")
+                    .help("Open the pull request created from the current branch")
+                    .required(true),
+            ),
+        )
+        .get_matches();
 
-    let content = std::fs::read_to_string(&args.path)
-                    .expect("could not read file");
 
-    for line in content.lines() {
-        if line.contains(&args.pattern) {
-            println!("{}", line);
+    match matches.subcommand() {
+        ("pr", Some(pr_matches)) => {
+            // Now we have a reference to clone's matches
+            println!("Cloning {}", pr_matches.value_of("open").unwrap());
         }
+        ("", None) => println!("No subcommand was used"),
+        _ => unreachable!(),
     }
 }
-
