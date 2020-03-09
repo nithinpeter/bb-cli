@@ -1,5 +1,7 @@
+mod bitbucket;
+
 use clap::{App, ArgGroup};
-use std::process::Command;
+use bitbucket::bitbucket_sync::get_pr_link;
 
 fn main() {
     let matches = App::new("bb-cli")
@@ -19,26 +21,13 @@ fn main() {
     // Pull request subcommand
     if let Some(ref matches) = matches.subcommand_matches("pr") {
         if matches.is_present("open") {
-            // 1. find the current branch name
-            let current_branch= git_current_branch();
             // 2. check if you have corresponding pull request
+            get_pr_link();
 
             // 3. if yes open the pull request
-            println!("can you open that pr??");
+//            println!("can you open that pr??");
         }
     }
 }
 
-fn git_current_branch() -> String {
-    let result = Command::new("git")
-        .args(&["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()
-        .expect("git command failed to start");
 
-    let branch = String::from_utf8_lossy(&result.stdout);
-    return branch.to_string();
-}
-
-//fn get_pr_link(&current_branch: &str) {
-//
-//}
