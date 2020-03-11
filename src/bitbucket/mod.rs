@@ -1,2 +1,2 @@
-pub mod bitbucket;
+pub mod pr;
 pub mod git;

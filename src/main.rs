@@ -1,7 +1,7 @@
 mod bitbucket;
 
 use clap::{App, ArgGroup};
-use bitbucket::bitbucket::*;
+use bitbucket::pr::*;
 
 fn main() {
     let matches = App::new("bb-cli")
@@ -22,6 +22,8 @@ fn main() {
     if let Some(ref matches) = matches.subcommand_matches("pr") {
         if matches.is_present("open") {
             open_pr();
+        } else if matches.is_present("status") {
+            status_pr();
         }
     }
 }

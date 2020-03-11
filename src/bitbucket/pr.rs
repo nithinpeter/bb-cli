@@ -14,7 +14,9 @@ pub fn open_pr() {
     }
 }
 
-pub fn get_api_base_url() -> std::option::Option<String> {
+pub fn status_pr() {}
+
+fn get_api_base_url() -> std::option::Option<String> {
     let remote_url = super::git::git_remote();
     if let Ok(parsed) = Url::parse(&remote_url) {
         let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
@@ -33,7 +35,7 @@ pub fn get_api_base_url() -> std::option::Option<String> {
     }
 }
 
-pub fn get_current_pr(url: String) -> std::result::Result<String, reqwest::Error> {
+fn get_current_pr(url: String) -> std::result::Result<String, reqwest::Error> {
     let response: PullRequestsResponse = reqwest::blocking::get(url.as_str())?.json()?;
 
     if response.values.len() > 0 {
@@ -47,25 +49,25 @@ pub fn get_current_pr(url: String) -> std::result::Result<String, reqwest::Error
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PullRequestsResponse {
+struct PullRequestsResponse {
     values: Vec<PullRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PullRequest {
+struct PullRequest {
     description: String,
     links: PullRequestLinks,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PullRequestLinks {
+struct PullRequestLinks {
     #[serde(rename = "self")]
     self_link: Link,
     html: Link,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Link {
+struct Link {
     href: String,
 }
 
