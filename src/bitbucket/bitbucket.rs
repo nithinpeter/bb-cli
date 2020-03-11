@@ -1,59 +1,71 @@
-extern crate reqwest;
-extern crate tokio;
-extern crate futures;
+extern crate opener;
 
 use url::Url;
-use git::*;
 use reqwest::*;
-use futures::executor::block_on;
+use serde::{Deserialize, Serialize};
+use std::env;
 
-pub async fn get_pr_link() -> Result<String> {
-    println!("get_pr_link begings");
-
+pub fn open_pr() {
     let current_branch = super::git::git_current_branch();
     if let Some(base_url) = get_api_base_url() {
-        let pr_url = base_url + "pullrequests?q=destination.branch.name~\"" + current_branch.trim() + "\"";
-        println!("{}", pr_url);
-
-        println!("async begings");
-
-        let res = block_on(get_current_pr(pr_url));
-        println!("async ends");
+        let pr_search_api_url = base_url + "pullrequests?q=source.branch.name~\"" + current_branch.trim() + "\"";
+        let pr_link = get_current_pr(pr_search_api_url).unwrap();
+        opener::open(pr_link);
     }
-
-    panic!("Failed to fetch");
 }
 
 pub fn get_api_base_url() -> std::option::Option<String> {
     let remote_url = super::git::git_remote();
     if let Ok(parsed) = Url::parse(&remote_url) {
         let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
-        let username = "xxxxx";
-        let password = "xxxxx";
-//        ?q=target.branch.name~"master"
-        let url = format!("{}://{}:{}@api.{}/2.0/repositories/{}",
+        let username = env::var("BB_CLI_USERNAME").unwrap();
+        let password = env::var("BB_CLI_PASSWORD").unwrap();
+
+        let url = format!("{}://{}:{}@api.{}/2.0/repositories{}/",
                           parsed.scheme().to_owned(),
                           username,
                           password,
                           parsed.host_str().unwrap(),
-                          &slug
-        );
+                          &slug);
         return Some(url);
-//        return Some(parsed.scheme().to_owned() + "://api." + parsed.host_str().unwrap() + "/2.0/repositories" + &slug);
     } else {
         return None;
     }
 }
 
-pub async fn get_current_pr(url: String) -> Result<String> {
-    let body = reqwest::get(url.as_str())
-        .await?
-        .text()
-        .await?;
+pub fn get_current_pr(url: String) -> std::result::Result<String, reqwest::Error> {
+    let response: PullRequestsResponse = reqwest::blocking::get(url.as_str())?.json()?;
 
-    println!("body: {:?}", body);
-    println!("body");
+    if response.values.len() > 0 {
+        let pr = &response.values[0];
+        let pr_link = pr.links.html.href.clone();
+        return Ok(pr_link);
+    }
 
-    return Ok(body);
+
+    panic!("Failed to find the PR link")
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PullRequestsResponse {
+    values: Vec<PullRequest>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PullRequest {
+    description: String,
+    links: PullRequestLinks,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PullRequestLinks {
+    #[serde(rename = "self")]
+    self_link: Link,
+    html: Link,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Link {
+    href: String,
 }
 

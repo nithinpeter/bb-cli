@@ -16,10 +16,6 @@ pub fn git_remote() -> String {
         .output()
         .expect("git command failed to start");
 
-//    let remote = String::from_utf8_lossy(&result.stdout);
-//    return remote.to_string();
-
-    let remote = "https://bitbucket.org/nithinpeterk/react-fork.git";
-
+    let remote = String::from_utf8_lossy(&result.stdout);
     return remote.to_string();
 }

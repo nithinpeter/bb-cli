@@ -1,7 +1,7 @@
 mod bitbucket;
 
 use clap::{App, ArgGroup};
-use bitbucket::bitbucket_sync::get_pr_link;
+use bitbucket::bitbucket::*;
 
 fn main() {
     let matches = App::new("bb-cli")
@@ -21,11 +21,7 @@ fn main() {
     // Pull request subcommand
     if let Some(ref matches) = matches.subcommand_matches("pr") {
         if matches.is_present("open") {
-            // 2. check if you have corresponding pull request
-            get_pr_link();
-
-            // 3. if yes open the pull request
-//            println!("can you open that pr??");
+            open_pr();
         }
     }
 }
