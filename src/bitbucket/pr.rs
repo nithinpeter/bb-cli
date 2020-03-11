@@ -16,6 +16,21 @@ pub fn open_pr() {
 
 pub fn status_pr() {}
 
+pub fn create_pr() {
+    let remote_url = super::git::git_remote();
+    if let Ok(parsed) = Url::parse(&remote_url) {
+        let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
+        let current_branch = super::git::git_current_branch();
+        let create_pr_url = format!("{}://{}{}/pull-requests/new?source={}",
+                                    parsed.scheme().to_owned(),
+                                    parsed.host_str().unwrap(),
+                                    &slug,
+                                    current_branch);
+
+        opener::open(create_pr_url);
+    }
+}
+
 fn get_api_base_url() -> std::option::Option<String> {
     let remote_url = super::git::git_remote();
     if let Ok(parsed) = Url::parse(&remote_url) {

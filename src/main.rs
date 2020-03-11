@@ -13,7 +13,7 @@ fn main() {
                             --status           'displays the status of the pull request'
                             --create           'opens create pull request screen in the browser")
                 .group(ArgGroup::with_name("pr-args")
-                    .args(&["open", "status"])
+                    .args(&["open", "status", "create"])
                     .required(true))
         )
         .get_matches();
@@ -24,6 +24,8 @@ fn main() {
             open_pr();
         } else if matches.is_present("status") {
             status_pr();
+        } else if matches.is_present("create") {
+            create_pr();
         }
     }
 }
