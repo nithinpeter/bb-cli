@@ -58,8 +58,7 @@ fn get_current_pr(url: String) -> std::result::Result<String, reqwest::Error> {
         let pr_link = pr.links.html.href.clone();
         return Ok(pr_link);
     }
-
-
+    
     panic!("Failed to find the PR link")
 }
 
