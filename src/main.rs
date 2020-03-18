@@ -1,7 +1,7 @@
 mod bitbucket;
 
-use clap::{App, ArgGroup, SubCommand};
-use bitbucket::pr::*;
+use clap::{App, SubCommand};
+use bitbucket::*;
 
 fn main() {
     let matches = App::new("bb-cli")
@@ -49,13 +49,17 @@ fn main() {
 
     if let Some(ref prMatches) = matches.subcommand_matches("pr") {
         match prMatches.subcommand_name() {
-            Some("view") => open_pr(),
-            Some("status") => status_pr(),
-            Some("create") => create_pr(),
-            Some("list") => list_pr(),
+            Some("view") => pr::view_pr(),
+            Some("status") => pr::status_pr(),
+            Some("create") => pr::create_pr(),
+            Some("list") => pr::list_pr(),
+            _ => {}
+        };
+    } else if let Some(ref prMatches) = matches.subcommand_matches("branch") {
+        match prMatches.subcommand_name() {
+            Some("view") => branch::view_branch(),
             _ => {}
         };
     }
 }
-
 

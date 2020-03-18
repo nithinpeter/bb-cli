@@ -8,7 +8,7 @@ use std::env;
 use colored::*;
 
 
-pub fn open_pr() {
+pub fn view_pr() {
     let pr = get_current_pr().unwrap();
     let pr_link = pr.links.html.href.clone();
     opener::open(pr_link);
