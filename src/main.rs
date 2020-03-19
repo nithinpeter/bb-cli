@@ -13,7 +13,7 @@ fn main() {
                         SubCommand::with_name("view").about("Opens the pull request in the browser"),
                         SubCommand::with_name("status").about("Displays the status of the pull request"),
                         SubCommand::with_name("create").about("Opens create pull request screen in the browser"),
-                        SubCommand::with_name("list").about("List pull requests authored by you"),
+                        SubCommand::with_name("list").about("Lists pull requests authored by you"),
                     ]
                 )
         )
@@ -55,9 +55,19 @@ fn main() {
             Some("list") => pr::list_pr(),
             _ => {}
         };
-    } else if let Some(ref prMatches) = matches.subcommand_matches("branch") {
-        match prMatches.subcommand_name() {
+    } else if let Some(ref branchMatches) = matches.subcommand_matches("branch") {
+        match branchMatches.subcommand_name() {
             Some("view") => branch::view_branch(),
+            _ => {}
+        };
+    } else if let Some(ref repoMatches) = matches.subcommand_matches("repo") {
+        match repoMatches.subcommand_name() {
+            Some("view") => repo::view_repo(),
+            _ => {}
+        };
+    } else if let Some(ref commitMatches) = matches.subcommand_matches("commit") {
+        match commitMatches.subcommand_name() {
+            Some("view") => commit::view_commit(),
             _ => {}
         };
     }
