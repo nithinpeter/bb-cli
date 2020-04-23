@@ -1,54 +1,62 @@
-extern crate opener;
 extern crate colored;
+extern crate opener;
 
-use url::Url;
-use reqwest::*;
+use anyhow::{anyhow, Context, Result};
+use colored::*;
 use serde::{Deserialize, Serialize};
 use std::env;
-use colored::*;
+use url::Url;
 
-
-pub fn view_pr() {
-    let pr = get_current_pr().unwrap();
+pub fn view_pr() -> Result<()> {
+    let pr = get_current_pr()?;
     let pr_link = pr.links.html.href.clone();
-    opener::open(pr_link);
+
+    opener::open(pr_link).context("Failed to open PR link")
 }
 
-pub fn status_pr() {
-    let pr = get_current_pr().unwrap();
+pub fn status_pr() -> Result<()> {
+    let pr = get_current_pr()?;
     print_pr(&pr);
+
+    Ok(())
 }
 
-pub fn create_pr() {
+pub fn create_pr() -> Result<()> {
     let remote_url = super::git::git_remote();
-    if let Ok(parsed) = Url::parse(&remote_url) {
-        let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
-        let current_branch = super::git::git_current_branch();
-        let create_pr_url = format!("{}://{}{}/pull-requests/new?source={}",
-                                    parsed.scheme().to_owned(),
-                                    parsed.host_str().unwrap(),
-                                    &slug,
-                                    current_branch);
+    let parsed = Url::parse(&remote_url)?;
+    let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
+    let current_branch = super::git::git_current_branch();
+    let create_pr_url = format!(
+        "{}://{}{}/pull-requests/new?source={}",
+        parsed.scheme().to_owned(),
+        parsed.host_str().unwrap(),
+        &slug,
+        current_branch
+    );
 
-        opener::open(create_pr_url);
-    }
+    opener::open(create_pr_url).context("Failed to open create PR link")
 }
 
-pub fn list_pr() {
+pub fn list_pr() -> Result<()> {
     println!("{}", "Your open pull requests".bold());
     println!();
-    let prs = get_current_user_prs().unwrap();
+    let prs = get_current_user_prs()?;
     for pr in prs.iter() {
         print_pr(pr);
         println!();
     }
+
+    Ok(())
 }
 
 fn print_pr(pr: &PullRequest) {
     let pr_link = pr.links.html.href.clone();
     println!("{}", pr.title.bold().underline());
-    println!("{} -> {}", pr.source.branch.name, pr.destination.branch.name);
-//    println!("{}: {}", "Description".bold(), pr.description);
+    println!(
+        "{} -> {}",
+        pr.source.branch.name, pr.destination.branch.name
+    );
+    //    println!("{}: {}", "Description".bold(), pr.description);
     println!("{}: {}", "State".bold(), pr.state);
     println!("{}  {}", "🔗".bold(), pr_link);
 }
@@ -57,61 +65,56 @@ fn print_line() {
     println!("--------------------------------");
 }
 
-fn get_api_base_url() -> std::option::Option<String> {
+fn get_api_base_url() -> Result<String> {
     let remote_url = super::git::git_remote();
-    if let Ok(parsed) = Url::parse(&remote_url) {
-        let username = env::var("BB_CLI_USERNAME").unwrap();
-        let password = env::var("BB_CLI_PASSWORD").unwrap();
+    let parsed = Url::parse(&remote_url).context("Failed to parse git remote url")?;
+    let username = env::var("BB_CLI_USERNAME").context("BB_CLI_USERNAME environment isn't set")?;
+    let password =
+        env::var("BB_CLI_PASSWORD").context("BB_CLI_PASSWORD environment variable isn't set")?;
 
-        let url = format!("{}://{}:{}@api.{}",
-                          parsed.scheme().to_owned(),
-                          username,
-                          password,
-                          parsed.host_str().unwrap());
-        return Some(url);
-    } else {
-        return None;
-    }
+    let url = format!(
+        "{}://{}:{}@api.{}",
+        parsed.scheme().to_owned(),
+        username,
+        password,
+        parsed.host_str().unwrap()
+    );
+    Ok(url)
 }
 
-fn get_current_pr() -> std::result::Result<PullRequest, reqwest::Error> {
+fn get_current_pr() -> Result<PullRequest> {
     let current_branch = super::git::git_current_branch();
     let remote_url = super::git::git_remote();
 
-    if let Some(base_url) = get_api_base_url() {
-        if let Ok(parsed) = Url::parse(&remote_url) {
-            let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
+    let base_url = get_api_base_url()?;
+    let parsed = Url::parse(&remote_url)?;
+    let slug = parsed.path().split(".git").collect::<Vec<_>>().join("");
 
-            let pr_search_api_url = base_url
-                + "/2.0/repositories"
-                + &slug
-                + "/pullrequests?q=source.branch.name~\""
-                + current_branch.trim() + "\"";
+    let pr_search_api_url = base_url
+        + "/2.0/repositories"
+        + &slug
+        + "/pullrequests?q=source.branch.name~\""
+        + current_branch.trim()
+        + "\"";
 
-            let response: PullRequestsResponse = reqwest::blocking::get(pr_search_api_url.as_str())?.json()?;
+    let response: PullRequestsResponse =
+        reqwest::blocking::get(pr_search_api_url.as_str())?.json()?;
 
-            if response.values.len() > 0 {
-                let pr = response.values.first().unwrap().to_owned();
-                return Ok(pr);
-            }
-        }
-    }
-
-
-    panic!("Failed to find the PR link")
+    response
+        .values
+        .first()
+        .cloned()
+        .ok_or(anyhow!("No current PR found"))
 }
 
-fn get_current_user_prs() -> std::result::Result<Vec<PullRequest>, reqwest::Error> {
-    if let Some(base_url) = get_api_base_url() {
-        let username = env::var("BB_CLI_USERNAME").unwrap();
-        let full_url = format!("{}/2.0/pullrequests/{}?state=OPEN", base_url, username);
+fn get_current_user_prs() -> Result<Vec<PullRequest>> {
+    let base_url = get_api_base_url()?;
+    let username = env::var("BB_CLI_USERNAME")?;
+    let full_url = format!("{}/2.0/pullrequests/{}?state=OPEN", base_url, username);
 
-        let response: PullRequestsResponse = reqwest::blocking::get(full_url.as_str())?.json()?;
+    let response: PullRequestsResponse = reqwest::blocking::get(full_url.as_str())?.json()?;
 
-        return Ok(response.values);
-    }
-
-    panic!("Failed to find the PR link")
+    Ok(response.values)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +158,4 @@ struct Repository {
 struct PullRequestBranch {
     branch: Branch,
     repository: Repository,
-
 }
-
